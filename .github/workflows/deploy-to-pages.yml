@@ -34,8 +34,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 上传整个项目根目录作为静态网站
-          path: '.'
+          # 上传马拉松配速计算器目录作为静态网站
+          path: '-marathon-pace-calculator-'
 
   # 部署作业
   deploy:
