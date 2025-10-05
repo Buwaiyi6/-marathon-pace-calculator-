@@ -1,0 +1,15 @@
+component: website
+name: marathon-pace-calculator
+app: marathon-pace-calculator-app
+
+inputs:
+  src:
+    src: ./
+    index: index.html
+    error: index.html
+  region: ap-shanghai
+  bucketName: buwaiyi-1380439897
+  protocol: https
+  website:
+    indexDocument: index.html
+    errorDocument: index.html

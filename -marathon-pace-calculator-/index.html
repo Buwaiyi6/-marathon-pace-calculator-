@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>马拉松配速计算工具 · MVP</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>马拉松配速计算工具</h1>
+    </header>
+
+    <main class="container">
+      <!-- 配速计算模式 -->
+      <section id="panel-pace" class="panel active">
+        <div class="card">
+          <h2>配速计算</h2>
+
+          <form id="form-pace" class="form-grid" novalidate>
+            <fieldset class="group">
+              <legend>赛事类型</legend>
+              
+              <div class="strategy-options race-options">
+                <label class="strategy-option">
+                  <input type="radio" name="race" value="full" checked />
+                  <div class="strategy-card">
+                    <div class="strategy-title">全马</div>
+                    <div class="strategy-desc">42.195公里</div>
+                  </div>
+                </label>
+                
+                <label class="strategy-option">
+                  <input type="radio" name="race" value="half" />
+                  <div class="strategy-card">
+                    <div class="strategy-title">半马</div>
+                    <div class="strategy-desc">21.0975公里</div>
+                  </div>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="group">
+              <legend>目标完赛成绩</legend>
+              
+              <!-- 滚轮选择器区域 -->
+              <div class="wheel-picker-container">
+                <div class="embedded-wheels">
+                  <div class="wheel-column">
+                    <div class="wheel-label">时</div>
+                    <div id="hour-wheel" class="wheel-picker"></div>
+                  </div>
+                  <div class="wheel-column">
+                    <div class="wheel-label">分</div>
+                    <div id="minute-wheel" class="wheel-picker"></div>
+                  </div>
+                  <div class="wheel-column">
+                    <div class="wheel-label">秒</div>
+                    <div id="second-wheel" class="wheel-picker"></div>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="group">
+              <legend>策略选择</legend>
+              
+              <div class="strategy-options">
+                <label class="strategy-option">
+                  <input type="radio" name="strategy-pace" value="negative" checked />
+                  <div class="strategy-card">
+                    <div class="strategy-title">负分割策略</div>
+                    <div class="strategy-desc">前半程略慢、后半程略快，逐渐加速</div>
+                    <div class="strategy-detail">有助于避免过早疲劳，降低撞墙风险，适合大多数跑者</div>
+                  </div>
+                </label>
+                
+                <label class="strategy-option">
+                  <input type="radio" name="strategy-pace" value="even" />
+                  <div class="strategy-card">
+                    <div class="strategy-title">匀速策略</div>
+                    <div class="strategy-desc">从起点到终点，全程各公里用时基本相同</div>
+                    <div class="strategy-detail">恒定速度跑完全程，适合经验丰富的跑者，需要良好的体能储备</div>
+                  </div>
+                </label>
+              </div>
+              
+              <!-- 负分割策略滑动选择区域 -->
+              <div id="negative-split-wrap-pace" class="negative-split-wrap">
+                <div class="slider-container">
+                  <div class="scale-label">
+                    <div class="scale-hint">您希望"起始配速"比"最大配速"慢多少（秒/公里）？</div>
+                    <span class="scale-value" id="scale-value-pace">30 秒/公里</span>
+                  </div>
+                  <div class="scale-container">
+                    <div class="scale-track" id="scale-track-pace">
+                      <div class="scale-pointer" id="scale-pointer-pace"></div>
+                      <div class="scale-marks">
+                        <div class="scale-mark" data-value="0">0</div>
+                        <div class="scale-mark" data-value="10">10</div>
+                        <div class="scale-mark" data-value="20">20</div>
+                        <div class="scale-mark" data-value="30">30</div>
+                        <div class="scale-mark" data-value="40">40</div>
+                        <div class="scale-mark" data-value="50">50</div>
+                        <div class="scale-mark" data-value="60">60</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="slider-description">
+                    <div class="slider-hint">数值越大，起跑越保守，后半程加速幅度越大</div>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+
+            <div class="actions">
+              <button type="submit" class="btn primary expand">配速计算</button>
+              <div class="btn-spacer"></div>
+              <button type="button" id="clear-pace" class="btn clear">清除</button>
+            </div>
+          </form>
+
+          <div class="results" id="results-pace">
+            <div class="result-line">
+              <span class="result-label">所需平均配速</span>
+              <span class="result-value" id="avg-pace">—</span>
+            </div>
+            <div class="table-wrap">
+              <table class="table" aria-label="关键节点用时">
+                <thead>
+                  <tr>
+                    <th>里程点</th>
+                    <th id="pace-column-header" class="hidden">参考配速</th>
+                    <th>累计用时</th>
+                  </tr>
+                </thead>
+                <tbody id="splits-body">
+                  <tr><td colspan="3" class="muted">暂无数据</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="app-footer">
+      <small>适用于现代浏览器 · 仅作训练用途</small>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+  </html>
+
