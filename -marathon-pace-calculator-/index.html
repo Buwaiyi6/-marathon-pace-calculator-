@@ -43,19 +43,52 @@
             <fieldset class="group">
               <legend>目标完赛成绩</legend>
               
+              <!-- 时间输入模块 -->
+              <div class="time-input-module">
+                <div class="time-inputs">
+                  <div class="time-input-group">
+                    <label class="time-label">时</label>
+                    <div class="time-input-wrapper">
+                      <input type="number" id="input-hour" class="time-input" min="0" max="10" value="3">
+                      <div class="time-buttons">
+                        <button type="button" class="time-btn time-btn-down" data-target="input-hour">-</button>
+                        <button type="button" class="time-btn time-btn-up" data-target="input-hour">+</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="time-input-group">
+                    <label class="time-label">分</label>
+                    <div class="time-input-wrapper">
+                      <input type="number" id="input-minute" class="time-input" min="0" max="59" value="45">
+                      <div class="time-buttons">
+                        <button type="button" class="time-btn time-btn-down" data-target="input-minute">-</button>
+                        <button type="button" class="time-btn time-btn-up" data-target="input-minute">+</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="time-input-group">
+                    <label class="time-label">秒</label>
+                    <div class="time-input-wrapper">
+                      <input type="number" id="input-second" class="time-input" min="0" max="59" value="30">
+                      <div class="time-buttons">
+                        <button type="button" class="time-btn time-btn-down" data-target="input-second">-</button>
+                        <button type="button" class="time-btn time-btn-up" data-target="input-second">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <!-- 滚轮选择器区域 -->
               <div class="wheel-picker-container">
                 <div class="embedded-wheels">
                   <div class="wheel-column">
-                    <div class="wheel-label">时</div>
                     <div id="hour-wheel" class="wheel-picker"></div>
                   </div>
                   <div class="wheel-column">
-                    <div class="wheel-label">分</div>
                     <div id="minute-wheel" class="wheel-picker"></div>
                   </div>
                   <div class="wheel-column">
-                    <div class="wheel-label">秒</div>
                     <div id="second-wheel" class="wheel-picker"></div>
                   </div>
                 </div>
@@ -146,7 +179,7 @@
     </main>
 
     <footer class="app-footer">
-      <small>适用于现代浏览器 · 仅作训练用途</small>
+      <small>适用于现代浏览器 仅作训练用途</small>
     </footer>
 
     <script src="script.js"></script>

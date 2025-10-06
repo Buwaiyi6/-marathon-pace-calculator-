@@ -128,9 +128,113 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   .input-row.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Time Input Module Styles */
+.time-input-module {
+  margin-bottom: 20px;
+}
+
+/* Force width alignment between input and wheel modules */
+.time-inputs,
+.embedded-wheels {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.time-input-group,
+.wheel-column {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.time-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: end;
+}
+
+.time-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.time-label {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.time-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.time-input {
+  width: 100%;
+  height: 50px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  background: #0b1220;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 0;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.time-input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+.time-buttons {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+}
+
+.time-btn {
+  width: 32px;
+  height: 32px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-btn:hover {
+  background: rgba(34, 197, 94, 0.2);
+  transform: scale(1.05);
+}
+
+.time-btn:active {
+  background: var(--accent);
+  color: #0b1220;
+  transform: scale(0.95);
+}
+
 /* Wheel Picker Styles */
 .wheel-picker-container {
-  padding: 16px 0;
+  padding: 0;
+  margin-top: 0;
 }
 
 .embedded-wheels {
@@ -148,7 +252,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 0;
+  width: 100%;
 }
 
 .wheel-label {
@@ -168,6 +273,10 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   cursor: grab;
   transition: all 0.2s ease;
   user-select: none;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .wheel-picker:hover {
@@ -520,12 +629,61 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
+  .time-inputs {
+    gap: 16px;
+  }
+  
+  .time-input-group {
+    width: 100%;
+  }
+  
+  .time-input-wrapper {
+    width: 100%;
+    gap: 4px;
+  }
+  
+  .time-input {
+    width: 100%;
+    height: 44px;
+    font-size: 18px;
+    box-sizing: border-box;
+  }
+  
+  .time-buttons {
+    width: 100%;
+  }
+  
+  .time-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+  
   .embedded-wheels {
     gap: 16px;
   }
   
+  .wheel-column {
+    width: 100%;
+  }
+  
+  .wheel-picker-container {
+    padding: 0;
+    margin-top: 0;
+  }
+  
   .wheel-picker {
+    width: 100%;
     height: 160px;
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    box-sizing: border-box;
+    min-width: 0;
   }
   
   .wheel-item {

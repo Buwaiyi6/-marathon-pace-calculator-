@@ -128,6 +128,10 @@
       this.lastMoveTime = 0;
       this.animationId = null;
       
+      // Detect mobile and adjust item height accordingly
+      this.isMobile = window.innerWidth <= 640;
+      this.itemHeight = this.isMobile ? 32 : options.itemHeight;
+      
       this.init();
     }
     
@@ -185,13 +189,18 @@
       this.velocity = 0;
       this.lastMoveTime = Date.now();
       this.hasMoved = false; // Track if user has actually dragged
+      this.initialTransform = this.getCenteredTransform();
       
       if (this.animationId) {
         cancelAnimationFrame(this.animationId);
         this.animationId = null;
       }
       
+      // Prevent default to avoid scrolling the page
       e.preventDefault();
+      
+      // Add visual feedback
+      this.container.style.transform = 'scale(0.98)';
     }
     
     handleMove(e) {
@@ -202,8 +211,8 @@
       const newY = this.getY(e);
       const deltaY = newY - this.currentY;
       
-      // Track if user has moved significantly (more than 5px)
-      if (Math.abs(deltaY) > 5) {
+      // Track if user has moved significantly (more than 3px for better sensitivity)
+      if (Math.abs(deltaY) > 3) {
         this.hasMoved = true;
       }
       
@@ -211,18 +220,17 @@
       this.currentY = newY;
       this.lastMoveTime = currentTime;
       
-      // Calculate index change based on movement
-      const deltaIndex = Math.round(-deltaY / this.options.itemHeight);
-      const newIndex = this.currentIndex + deltaIndex;
+      // Calculate total movement from start
+      const totalDeltaY = newY - this.startY;
       
       // Update the transform directly for smooth dragging
-      const currentTransform = this.getCenteredTransform();
-      const newTransform = currentTransform - deltaY;
+      const newTransform = this.initialTransform + totalDeltaY;
       this.wheelList.style.transform = `translateY(${newTransform}px)`;
       
       // Update selection based on which item is in the center
       this.updateSelectionFromTransform(newTransform);
       
+      // Prevent default to avoid scrolling the page
       e.preventDefault();
     }
     
@@ -231,11 +239,17 @@
       
       this.isDragging = false;
       
-      // Apply momentum
+      // Remove visual feedback
+      this.container.style.transform = 'scale(1)';
+      
+      // Always snap to nearest first, then apply momentum if needed
+      this.snapToNearest();
+      
+      // Apply momentum after snapping
       if (Math.abs(this.velocity) > 0.5) {
-        this.applyMomentum();
-      } else {
-        this.snapToNearest();
+        setTimeout(() => {
+          this.applyMomentum();
+        }, 50);
       }
     }
     
@@ -246,55 +260,77 @@
         return;
       }
       
+      // Prevent event bubbling
+      e.preventDefault();
+      e.stopPropagation();
+      
       // Get click position relative to container
       const rect = this.container.getBoundingClientRect();
       const clickY = e.clientY - rect.top;
       
       // Calculate which item was clicked
-      const itemHeight = this.options.itemHeight;
+      const itemHeight = this.itemHeight;
       const containerHeight = this.container.clientHeight;
       
       // Find the item that was clicked
       const centerY = containerHeight / 2;
       const relativeY = clickY - centerY;
-      // Fix: Use positive relativeY to get correct direction
+      
+      // Calculate the target index based on click position
       const clickedIndex = Math.round(relativeY / itemHeight) + this.currentIndex;
       
       // Clamp to valid range
       const maxIndex = this.options.data.length - 1;
       const newIndex = Math.max(0, Math.min(maxIndex, clickedIndex));
       
+      console.log(`Click detected: clickY=${clickY}, centerY=${centerY}, relativeY=${relativeY}, clickedIndex=${clickedIndex}, newIndex=${newIndex}`);
+      
       // Add visual feedback
       createRippleEffect(e.clientX, e.clientY);
       
-      // Update selection with smooth animation
+      // Update selection directly
       this.setIndex(newIndex);
-      this.snapToNearest();
     }
     
     
     updateSelectionFromTransform(transform) {
       const containerHeight = this.container.clientHeight;
-      const itemHeight = this.options.itemHeight;
+      const itemHeight = this.itemHeight;
       
       // Calculate which item is currently in the center
       const centerY = containerHeight / 2;
       const itemY = centerY - transform;
       const index = Math.round(itemY / itemHeight);
       
+      // Clamp to valid range
+      const clampedIndex = Math.max(0, Math.min(this.options.data.length - 1, index));
+      
       // Update current index if it changed
-      if (index !== this.currentIndex && index >= 0 && index < this.options.data.length) {
-        this.currentIndex = index;
+      if (clampedIndex !== this.currentIndex) {
+        this.currentIndex = clampedIndex;
         this.updateSelection();
+        // Trigger data sync to input fields
+        this.dispatchChangeEvent();
       }
     }
     
     handleWheel(e) {
       e.preventDefault();
+      e.stopPropagation();
+      
+      // Clear any existing animation
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
+      }
       
       const delta = e.deltaY > 0 ? 1 : -1;
-      this.setIndex(this.currentIndex + delta);
-      this.snapToNearest();
+      const newIndex = this.currentIndex + delta;
+      
+      console.log(`Wheel event: deltaY=${e.deltaY}, delta=${delta}, currentIndex=${this.currentIndex}, newIndex=${newIndex}`);
+      
+      // Directly update without snapToNearest to avoid conflicts
+      this.setIndex(newIndex);
     }
     
     getY(e) {
@@ -304,10 +340,16 @@
     setIndex(index) {
       const maxIndex = this.options.data.length - 1;
       const newIndex = Math.max(0, Math.min(maxIndex, index));
+      
+      console.log(`setIndex called: requested=${index}, clamped=${newIndex}, current=${this.currentIndex}, maxIndex=${maxIndex}, data=${this.options.data}`);
+      
       if (newIndex !== this.currentIndex) {
         this.currentIndex = newIndex;
         this.updateTransform();
         this.dispatchChangeEvent();
+        console.log(`Index updated to: ${this.currentIndex}, value: ${this.options.data[this.currentIndex]}`);
+      } else {
+        console.log(`Index unchanged: ${this.currentIndex}, reason: ${index < 0 ? 'below minimum' : index > maxIndex ? 'above maximum' : 'same index'}`);
       }
     }
     
@@ -327,17 +369,52 @@
     getCenteredTransform() {
       // Calculate the transform to center the selected item
       const containerHeight = this.container.clientHeight;
-      const itemHeight = this.options.itemHeight;
-      const selectedItemOffset = this.currentIndex * itemHeight;
+      const itemHeight = this.itemHeight;
       
-      // Center the selected item in the container
-      return (containerHeight / 2) - (itemHeight / 2) - selectedItemOffset;
+      // Calculate the position of the selected item
+      const selectedItemTop = this.currentIndex * itemHeight;
+      const selectedItemCenter = selectedItemTop + (itemHeight / 2);
+      
+      // Calculate the transform to center the selected item in the container
+      const containerCenter = containerHeight / 2;
+      return containerCenter - selectedItemCenter;
+    }
+    
+    getCurrentTransform() {
+      // Get the current transform value from the style
+      const transform = this.wheelList.style.transform;
+      if (transform && transform.includes('translateY')) {
+        const match = transform.match(/translateY\(([^)]+)px\)/);
+        if (match) {
+          return parseFloat(match[1]);
+        }
+      }
+      return this.getCenteredTransform();
     }
     
     centerSelectedItem() {
       // Initial positioning to center the selected item
       const translateY = this.getCenteredTransform();
       this.wheelList.style.transform = `translateY(${translateY}px)`;
+      this.updateSelection();
+    }
+    
+    forceReposition() {
+      // Force reposition the wheel to the correct position
+      console.log(`Force repositioning ${this.container.id}: index=${this.currentIndex}, value=${this.options.data[this.currentIndex]}, isMobile=${this.isMobile}, itemHeight=${this.itemHeight}`);
+      
+      // Update selection first
+      this.updateSelection();
+      
+      // Calculate and apply the correct transform
+      const translateY = this.getCenteredTransform();
+      this.wheelList.style.transform = `translateY(${translateY}px)`;
+      
+      // Force a reflow to ensure the transform is applied
+      this.wheelList.offsetHeight;
+      
+      // Dispatch change event
+      this.dispatchChangeEvent();
     }
     
     updateSelection() {
@@ -346,12 +423,33 @@
         const distance = Math.abs(index - this.currentIndex);
         item.classList.toggle('selected', index === this.currentIndex);
         item.classList.toggle('fade', distance > 2);
+        
+        // Debug: log the current selection
+        if (index === this.currentIndex) {
+          console.log(`Wheel ${this.container.id}: Selected item ${index} (${this.options.data[index]})`);
+        }
       });
     }
     
     snapToNearest() {
-      const targetY = this.getCenteredTransform();
-      this.wheelList.style.transform = `translateY(${targetY}px)`;
+      // Calculate which item is currently closest to center
+      const containerHeight = this.container.clientHeight;
+      const itemHeight = this.itemHeight;
+      const currentTransform = this.getCurrentTransform();
+      
+      // Calculate which item is in the center
+      const centerY = containerHeight / 2;
+      const itemY = centerY - currentTransform;
+      const nearestIndex = Math.round(itemY / itemHeight);
+      
+      // Clamp to valid range
+      const clampedIndex = Math.max(0, Math.min(this.options.data.length - 1, nearestIndex));
+      
+      // Update current index
+      this.currentIndex = clampedIndex;
+      
+      // Force reposition to ensure correct alignment
+      this.forceReposition();
     }
     
     applyMomentum() {
@@ -377,6 +475,7 @@
           this.animationId = requestAnimationFrame(animate);
         } else {
           this.updateSelection();
+          this.dispatchChangeEvent();
         }
       };
       
@@ -389,8 +488,14 @@
     
     setValue(value) {
       const index = this.options.data.indexOf(value);
+      console.log(`setValue called: value=${value}, index=${index}, data=${this.options.data}`);
       if (index !== -1) {
-        this.setIndex(index);
+        this.currentIndex = index;
+        this.updateTransform();
+        this.dispatchChangeEvent();
+        console.log(`setValue completed: currentIndex=${this.currentIndex}, getValue=${this.getValue()}`);
+      } else {
+        console.warn(`Value ${value} not found in data array:`, this.options.data);
       }
     }
   }
@@ -509,8 +614,8 @@
   
   // Initialize embedded wheel picker
   function initTimePicker() {
-    // Create hour data (1-7)
-    const hourData = ['1', '2', '3', '4', '5', '6', '7'];
+    // Create hour data (0-10)
+    const hourData = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
     
     // Create minute/second data (00-59)
     const timeData = Array.from({ length: 60 }, (_, i) => 
@@ -520,37 +625,244 @@
     hourPicker = new WheelPicker($("#hour-wheel"), {
       data: hourData,
       itemHeight: 36,
-      initialIndex: 0
+      initialIndex: 3  // 对应小时3 (索引3)
     });
     
     minutePicker = new WheelPicker($("#minute-wheel"), {
       data: timeData,
       itemHeight: 36,
-      initialIndex: 0
+      initialIndex: 45  // 对应分钟45
     });
     
     secondPicker = new WheelPicker($("#second-wheel"), {
       data: timeData,
       itemHeight: 36,
-      initialIndex: 0
+      initialIndex: 30  // 对应秒30
     });
     
     // Bind wheel picker change events
     hourPicker.container.addEventListener('wheel-change', () => {
       currentTime.hour = parseInt(hourPicker.getValue());
+      syncWheelsToInput();
     });
     
     minutePicker.container.addEventListener('wheel-change', () => {
       currentTime.minute = parseInt(minutePicker.getValue());
+      syncWheelsToInput();
     });
     
     secondPicker.container.addEventListener('wheel-change', () => {
       currentTime.second = parseInt(secondPicker.getValue());
+      syncWheelsToInput();
     });
+  }
+
+  // Initialize time input module
+  function initTimeInputModule() {
+    const hourInput = document.getElementById('input-hour');
+    const minuteInput = document.getElementById('input-minute');
+    const secondInput = document.getElementById('input-second');
+    
+    // Input change listeners
+    [hourInput, minuteInput, secondInput].forEach(input => {
+      input.addEventListener('input', handleTimeInput);
+      input.addEventListener('blur', validateTimeInput);
+    });
+    
+    // Button click listeners
+    document.querySelectorAll('.time-btn').forEach(btn => {
+      btn.addEventListener('click', handleTimeButton);
+    });
+  }
+
+  function handleTimeInput(event) {
+    const input = event.target;
+    const value = parseInt(input.value) || 0;
+    
+    // Real-time validation and formatting
+    if (input.id === 'input-hour') {
+      input.value = Math.max(0, Math.min(10, value));
+    } else {
+      input.value = Math.max(0, Math.min(59, value));
+    }
+    
+    // Sync to wheels
+    syncInputToWheels();
+  }
+
+  function validateTimeInput(event) {
+    const input = event.target;
+    let value = parseInt(input.value) || 0;
+    
+    // Ensure proper formatting
+    if (input.id === 'input-hour') {
+      value = Math.max(0, Math.min(10, value));
+    } else {
+      value = Math.max(0, Math.min(59, value));
+    }
+    
+    input.value = value;
+    syncInputToWheels();
+  }
+
+  function handleTimeButton(event) {
+    const btn = event.target;
+    const targetId = btn.dataset.target;
+    const input = document.getElementById(targetId);
+    const isUp = btn.classList.contains('time-btn-up');
+    
+    let currentValue = parseInt(input.value) || 0;
+    let newValue;
+    
+    if (isUp) {
+      newValue = currentValue + 1;
+    } else {
+      newValue = currentValue - 1;
+    }
+    
+    // Range limits
+    if (targetId === 'input-hour') {
+      newValue = Math.max(0, Math.min(10, newValue));
+    } else {
+      newValue = Math.max(0, Math.min(59, newValue));
+    }
+    
+    input.value = newValue;
+    syncInputToWheels();
+  }
+
+  function syncInputToWheels() {
+    const hour = parseInt(document.getElementById('input-hour').value) || 0;
+    const minute = parseInt(document.getElementById('input-minute').value) || 0;
+    const second = parseInt(document.getElementById('input-second').value) || 0;
+    
+    console.log(`Syncing input to wheels: ${hour}:${minute}:${second}`);
+    
+    // Update current time
+    currentTime.hour = hour;
+    currentTime.minute = minute;
+    currentTime.second = second;
+    
+    // Update wheel positions using setValue method
+    if (hourPicker && minutePicker && secondPicker) {
+      // Use setValue to ensure correct positioning
+      hourPicker.setValue(hour.toString());
+      minutePicker.setValue(minute.toString().padStart(2, '0'));
+      secondPicker.setValue(second.toString().padStart(2, '0'));
+      
+      console.log(`Wheel values after sync: hour=${hourPicker.getValue()}, minute=${minutePicker.getValue()}, second=${secondPicker.getValue()}`);
+    }
+  }
+
+  function syncWheelsToInput() {
+    if (hourPicker && minutePicker && secondPicker) {
+      const hour = parseInt(hourPicker.getValue());
+      const minute = parseInt(minutePicker.getValue());
+      const second = parseInt(secondPicker.getValue());
+      
+      document.getElementById('input-hour').value = hour;
+      document.getElementById('input-minute').value = minute;
+      document.getElementById('input-second').value = second;
+    }
   }
   
   // Initialize time picker when DOM is ready
   initTimePicker();
+  initTimeInputModule();
+  
+  // Simple initial sync
+  setTimeout(() => {
+    console.log('Initial sync starting...');
+    syncInputToWheels();
+    console.log('Initial sync completed');
+  }, 200);
+  
+  // Global fix function for debugging
+  window.fixWheelAlignment = function() {
+    console.log('Manual wheel alignment fix triggered');
+    syncInputToWheels();
+  };
+  
+  // Global test function for wheel behavior
+  window.testWheelBehavior = function() {
+    console.log('Testing wheel behavior...');
+    if (hourPicker) {
+      console.log('Hour picker initial state:', {
+        currentIndex: hourPicker.currentIndex,
+        currentValue: hourPicker.getValue(),
+        itemHeight: hourPicker.itemHeight,
+        isMobile: hourPicker.isMobile,
+        dataLength: hourPicker.options.data.length,
+        data: hourPicker.options.data
+      });
+      
+      // Test moving up
+      console.log('Testing move up...');
+      const upIndex = hourPicker.currentIndex - 1;
+      hourPicker.setIndex(upIndex);
+      
+      setTimeout(() => {
+        console.log('After move up:', {
+          currentIndex: hourPicker.currentIndex,
+          currentValue: hourPicker.getValue()
+        });
+        
+        // Test moving down
+        console.log('Testing move down...');
+        const downIndex = hourPicker.currentIndex + 1;
+        hourPicker.setIndex(downIndex);
+        
+        setTimeout(() => {
+          console.log('After move down:', {
+            currentIndex: hourPicker.currentIndex,
+            currentValue: hourPicker.getValue()
+          });
+        }, 100);
+      }, 100);
+    }
+  };
+  
+  // Simple test for upward movement
+  window.testUpward = function() {
+    if (hourPicker) {
+      console.log('Testing upward movement...');
+      console.log('Before:', hourPicker.currentIndex, hourPicker.getValue());
+      hourPicker.setIndex(hourPicker.currentIndex - 1);
+      console.log('After:', hourPicker.currentIndex, hourPicker.getValue());
+    }
+  };
+  
+  // Simple test for downward movement
+  window.testDownward = function() {
+    if (hourPicker) {
+      console.log('Testing downward movement...');
+      console.log('Before:', hourPicker.currentIndex, hourPicker.getValue());
+      hourPicker.setIndex(hourPicker.currentIndex + 1);
+      console.log('After:', hourPicker.currentIndex, hourPicker.getValue());
+    }
+  };
+  
+  // Handle window resize to update item heights
+  window.addEventListener('resize', function() {
+    const isMobile = window.innerWidth <= 640;
+    const newItemHeight = isMobile ? 32 : 36;
+    
+    if (hourPicker && hourPicker.itemHeight !== newItemHeight) {
+      hourPicker.itemHeight = newItemHeight;
+      hourPicker.isMobile = isMobile;
+      hourPicker.forceReposition();
+    }
+    if (minutePicker && minutePicker.itemHeight !== newItemHeight) {
+      minutePicker.itemHeight = newItemHeight;
+      minutePicker.isMobile = isMobile;
+      minutePicker.forceReposition();
+    }
+    if (secondPicker && secondPicker.itemHeight !== newItemHeight) {
+      secondPicker.itemHeight = newItemHeight;
+      secondPicker.isMobile = isMobile;
+      secondPicker.forceReposition();
+    }
+  });
   
   // Initialize ripple effects for all interactive elements
   function initRippleEffects() {
